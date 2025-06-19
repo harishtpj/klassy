@@ -1,8 +1,9 @@
 // package String provides a custom String type with chainable methods
 // with API similar to that of the standard library's strings package.
-package string
+package String
 
 import (
+	"iter"
 	"strings"
 )
 
@@ -111,7 +112,23 @@ func (self String) LastIndexAny(chars string) int {
 
 // TODO: LastIndexByte
 // TODO: LastIndexFunc
-// TODO: Lines
+
+// Lines returns an iterator over the newline-terminated lines in the 
+// string self. The lines yielded by the iterator include their terminating 
+// newlines. If self is empty, the iterator yields no lines at all. 
+// If self does not end in a newline, the final yielded line will not end in 
+// a newline. It returns a single-use iterator.
+func (self String) Lines() iter.Seq[String] {
+	strLines := strings.Lines(self.Value())
+
+	return func(yield func(String) bool) {
+		for line := range strLines {
+			if !yield(New(line)) {
+				return
+			}
+		}
+	}
+}
 
 // Map returns a copy of the string self with all its characters modified 
 // according to the mapping function. If mapping returns a negative value, 
