@@ -3,9 +3,12 @@
 package String
 
 import (
+	"fmt"
 	"iter"
 	"strings"
-	// "github.com/harishtpj/klassy/Slice"
+	"unicode"
+
+	"github.com/harishtpj/klassy/Slice"
 )
 
 // type String is alias for native string
@@ -85,11 +88,10 @@ func (self String) EqualFold(t string) bool {
 // Fields splits the String self around each instance of one or more consecutive
 // white space characters, as defined by unicode.IsSpace, returning a slice of 
 // substrings of self or an empty slice if self contains only white space.
-func (self String) Fields() []string {
-	return strings.Fields(self.Value())
+func (self String) Fields() Slice.Slice[String] {
+	return Slice.MapTo(Slice.New(strings.Fields(self.Value())), New)
 }
 
-// TODO: FieldsFunc
 // FieldsFunc splits self at each run of character c satisfying f(c) and returns 
 // an array of Slices of String. If all characters in self satisfy f(c) or the 
 // string is empty, an empty slice is returned.
@@ -97,10 +99,40 @@ func (self String) Fields() []string {
 // FieldsFunc makes no guarantees about the order in which it calls f(c) and 
 // assumes that f always returns the same value for a given c.
 func (self String) FieldsFunc(f func(rune) bool) Slice.Slice[String] {
-	return Slice.New(strings.FieldsFunc(self.Value(), f))
+	data := strings.FieldsFunc(self.Value(), f)
+	return Slice.MapTo(Slice.New(data), New)
 }
-// TODO: FieldsFuncSeq
-// TODO: FieldsSeq
+
+// FieldsFuncSeq returns an iterator over substrings of self split around runs 
+// of characters satisfying f(c). The iterator yields the same strings that 
+// would be returned by self.[FieldsFunc](), but without constructing the slice.
+func (self String) FieldsFuncSeq(f func(rune) bool) iter.Seq[String] {
+	strFields := strings.FieldsFuncSeq(self.Value(), f)
+
+	return func(yield func(String) bool) {
+		for field := range strFields {
+			if !yield(New(field)) {
+				return
+			}
+		}
+	}
+}
+
+// FieldsSeq returns an iterator over substrings of self split around runs of 
+// whitespace characters, as defined by unicode.IsSpace. The iterator yields 
+// the same strings that would be returned by self.[Fields](), but without 
+// constructing the slice.
+func (self String) FieldsSeq() iter.Seq[String] {
+	strFields := strings.FieldsSeq(self.Value())
+
+	return func(yield func(String) bool) {
+		for field := range strFields {
+			if !yield(New(field)) {
+				return
+			}
+		}
+	}
+}
 
 // HasPrefix reports if self starts with prefix
 func (self String) HasPrefix(prefix string) bool {
@@ -124,9 +156,31 @@ func (self String) IndexAny(chars string) int {
 	return strings.IndexAny(self.Value(), chars)
 }
 
-// TODO: IndexByte
-// TODO: IndexFunc
-// TODO: IndexRune
+// IndexByte returns the index of the first instance of c in self, 
+// or -1 if c is not present in self.
+func (self String) IndexByte(c byte) int {
+	return strings.IndexByte(self.Value(), c)
+}
+
+// IndexFunc returns the index into self of the first character 
+// satisfying f(c), or -1 if none do.
+func (self String) IndexFunc(f func(rune) bool) int {
+	return strings.IndexFunc(self.Value(), f)
+}
+
+// IndexRune returns the index of the first instance of the character r, 
+// or -1 if rune is not present in s. If r is utf8.RuneError, it returns 
+// the first instance of any invalid UTF-8 byte sequence.
+func (self String) IndexRune(r rune) int {
+	return strings.IndexRune(self.Value(), r)
+}
+
+// Join stringifies each element in elems and joins it using self
+// Works similar to Python's str.join method
+func (self String) Join(elems Slice.Slice[any]) String {
+	strSlice := Slice.MapTo(elems, func(v any) string { return fmt.Sprint(v) })
+	return New(strings.Join(strSlice.Items, self.Value()))
+}
 
 // LastIndex returns the index of the last instance of substr in self, 
 // or -1 if substr is not present in self.
@@ -140,8 +194,17 @@ func (self String) LastIndexAny(chars string) int {
 	return strings.LastIndexAny(self.Value(), chars)
 }
 
-// TODO: LastIndexByte
-// TODO: LastIndexFunc
+// LastIndexByte returns the index of the last instance of c in self, 
+// or -1 if c is not present in self.
+func (self String) LastIndexByte(c byte) int {
+	return strings.LastIndexByte(self.Value(), c)
+}
+
+// LastIndexFunc returns the index into self of the last 
+// character satisfying f(c), or -1 if none do.
+func (self String) LastIndexFunc(f func(rune) bool) int {
+	return strings.LastIndexFunc(self.Value(), f)
+}
 
 // Lines returns an iterator over the newline-terminated lines in the 
 // string self. The lines yielded by the iterator include their terminating 
@@ -205,15 +268,84 @@ func (self String) ReplaceAll(old, new string) String {
 // It is equivalent to [SplitN] with a count of -1.
 //
 // To split around the first instance of a separator, see [Cut].
-func (self String) Split(sep string) []string {
-	return strings.Split(self.Value(), sep)
+func (self String) Split(sep string) Slice.Slice[String] {
+	return Slice.MapTo(Slice.New(strings.Split(self.Value(), sep)), New)
 }
 
-// TODO: SplitAfter
-// TODO: SplitAfterN
-// TODO: SplitAfterSeq
-// TODO: SplitN
-// TODO: SplitSeq
+// SplitAfter slices self into all substrings after each instance of 
+// sep and returns a Slice of those substrings.
+//
+// If self does not contain sep and sep is not empty, SplitAfter returns 
+// a Slice of length 1 whose only element is self.
+//
+// If sep is empty, SplitAfter splits after each UTF-8 sequence. If both 
+// self and sep are empty, SplitAfter returns an empty Slice.
+//
+// It is equivalent to [SplitAfterN] with a count of -1.
+func (self String) SplitAfter(sep string) Slice.Slice[String] {
+	return Slice.MapTo(Slice.New(strings.SplitAfter(self.Value(), sep)), New)
+}
+
+// SplitAfterN slices self into substrings after each instance of sep and 
+// returns a Slice of those substrings.
+//
+// The count determines the number of substrings to return:
+//
+// - n > 0: at most n substrings; the last substring will be the unsplit remainder;
+// - n == 0: the result is nil (zero substrings);
+// - n < 0: all substrings.
+// Edge cases for self and sep (for example, empty strings) are handled as 
+// described in the documentation for [SplitAfter].
+func (self String) SplitAfterN(sep string, n int) Slice.Slice[String] {
+	return Slice.MapTo(Slice.New(strings.SplitAfterN(self.Value(), sep, n)), New)
+}
+
+// SplitAfterSeq returns an iterator over substrings of self split after each 
+// instance of sep. The iterator yields the same strings that would be returned 
+// by self.[SplitAfter](sep), but without constructing the slice. It returns a 
+// single-use iterator.
+func (self String) SplitAfterSeq(sep string) iter.Seq[String] {
+	strSplits := strings.SplitAfterSeq(self.Value(), sep)
+
+	return func(yield func(String) bool) {
+		for split := range strSplits {
+			if !yield(New(split)) {
+				return
+			}
+		}
+	}
+}
+
+// SplitN slices self into substrings separated by sep and returns a slice of 
+// the substrings between those separators.
+//
+// The count determines the number of substrings to return:
+//
+// - n > 0: at most n substrings; the last substring will be the unsplit remainder;
+// - n == 0: the result is nil (zero substrings);
+// - n < 0: all substrings.
+// Edge cases for self and sep (for example, empty strings) are handled as 
+// described in the documentation for [Split].
+//
+// To split around the first instance of a separator, see [Cut].
+func (self String) SplitN(sep string, n int) Slice.Slice[String] {
+	return Slice.MapTo(Slice.New(strings.SplitN(self.Value(), sep, n)), New)
+}
+
+// SplitSeq returns an iterator over all substrings of self separated by sep. 
+// The iterator yields the same strings that would be returned by self.[Split](sep), 
+// but without constructing the slice. It returns a single-use iterator.
+func (self String) SplitSeq(sep string) iter.Seq[String] {
+	strSplits := strings.SplitSeq(self.Value(), sep)
+
+	return func(yield func(String) bool) {
+		for split := range strSplits {
+			if !yield(New(split)) {
+				return
+			}
+		}
+	}
+}
 
 // Depreciated: Title
 
@@ -222,17 +354,40 @@ func (self String) ToLower() String {
 	return New(strings.ToLower(self.Value()))
 }
 
-// TODO: ToLowerSpecial
-// TODO: ToTitle
-// TODO: ToTitleSpecial
+// ToLowerSpecial returns a copy of self with all Unicode letters mapped 
+// to their lower case using the case mapping specified by c.
+func (self String) ToLowerSpecial(c unicode.SpecialCase) String {
+	return New(strings.ToLowerSpecial(c, self.Value()))
+}
+
+// ToTitle returns a copy of self with all Unicode letters 
+// mapped to their Unicode title case.
+func (self String) ToTitle() String {
+	return New(strings.ToTitle(self.Value()))
+}
+
+// ToTitleSpecial returns a copy of self with all Unicode letters mapped 
+// to their Unicode title case, giving priority to the special casing rules.
+func (self String) ToTitleSpecial(c unicode.SpecialCase) String {
+	return New(strings.ToTitleSpecial(c, self.Value()))
+}
 
 // ToUpper returns the Uppercased version of self
 func (self String) ToUpper() String {
 	return New(strings.ToUpper(self.Value()))
 }
 
-// TODO: ToUpperSpecial
-// TODO: ToValidUTF8
+// ToUpperSpecial returns a copy of self with all Unicode letters mapped 
+// to their upper case using the case mapping specified by c.
+func (self String) ToUpperSpecial(c unicode.SpecialCase) String {
+	return New(strings.ToUpperSpecial(c, self.Value()))
+}
+
+// ToValidUTF8 returns a copy of self with each run of invalid UTF-8 
+// byte sequences replaced by the replacement string, which may be empty.
+func (self String) ToValidUTF8(replacement string) String {
+	return New(strings.ToValidUTF8(self.Value(), replacement))
+}
 
 // Trim return the sliced version of self with all leading and trailing
 // characters in cutset removed

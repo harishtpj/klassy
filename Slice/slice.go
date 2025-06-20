@@ -3,12 +3,8 @@
 package Slice
 
 import (
-	"fmt"
 	"iter"
 	"slices"
-	"strings"
-
-	"github.com/harishtpj/klassy/String"
 )
 
 // type Slice is alias for custom Generic slice type
@@ -162,8 +158,3 @@ func MapTo[T, U comparable](self Slice[T], fn func(T) U) Slice[U] {
 	return New(result)
 }
 
-// Join stringifies each element and joins it using the given sep
-func (self Slice[T]) Join(sep string) String.String {
-	strSlice := MapTo(self, func(v T) string {return fmt.Sprint(v) })
-	return String.New(strings.Join(strSlice.Items, sep))
-}
