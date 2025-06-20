@@ -5,6 +5,7 @@ package String
 import (
 	"iter"
 	"strings"
+	// "github.com/harishtpj/klassy/Slice"
 )
 
 // type String is alias for native string
@@ -45,7 +46,11 @@ func (self String) ContainsRune(r rune) bool {
 	return strings.ContainsRune(self.Value(), r)
 }
 
-// TODO: Count
+// Count counts the number of non-overlapping instances of substr in self. 
+// If substr is an empty string, Count returns 1 + the number of characters in self.
+func (self String) Count(substr string) int {
+	return strings.Count(self.Value(), substr)
+}
 
 // Cut slices self around the first instance of sep, returning the text before and after sep.
 // The found result reports whether sep appears in self. If sep does not appear in self,
@@ -55,9 +60,27 @@ func (self String) Cut(sep string) (before, after String, found bool) {
 	return New(b), New(a), f
 }
 
-// TODO: CutPrefix
-// TODO: CutSuffix
-// TODO: EqualFold
+// CutPrefix returns self without the provided leading prefix string and reports 
+// whether it found the prefix. If self doesn't start with prefix, CutPrefix 
+// returns self, false. If prefix is the empty string, CutPrefix returns self, true.
+func (self String) CutPrefix(prefix string) (after String, found bool) {
+	a, f := strings.CutPrefix(self.Value(), prefix)
+	return New(a), f
+}
+
+// CutSuffix returns self without the provided ending suffix string and reports 
+// whether it found the suffix. If self doesn't end with suffix, CutSuffix returns 
+// self, false. If suffix is the empty string, CutSuffix returns self, true.
+func (self String) CutSuffix(suffix string) (before String, found bool) {
+	b, f := strings.CutSuffix(self.Value(), suffix)
+	return New(b), f
+}
+
+// EqualFold reports whether self and t, interpreted as UTF-8 strings, are equal 
+// under simple Unicode case-folding, which is a more general form of case-insensitivity.
+func (self String) EqualFold(t string) bool {
+	return strings.EqualFold(self.Value(), t)
+}
 
 // Fields splits the String self around each instance of one or more consecutive
 // white space characters, as defined by unicode.IsSpace, returning a slice of 
@@ -67,6 +90,15 @@ func (self String) Fields() []string {
 }
 
 // TODO: FieldsFunc
+// FieldsFunc splits self at each run of character c satisfying f(c) and returns 
+// an array of Slices of String. If all characters in self satisfy f(c) or the 
+// string is empty, an empty slice is returned.
+//
+// FieldsFunc makes no guarantees about the order in which it calls f(c) and 
+// assumes that f always returns the same value for a given c.
+func (self String) FieldsFunc(f func(rune) bool) Slice.Slice[String] {
+	return Slice.New(strings.FieldsFunc(self.Value(), f))
+}
 // TODO: FieldsFuncSeq
 // TODO: FieldsSeq
 
