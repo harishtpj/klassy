@@ -96,8 +96,6 @@ func (self String) IndexAny(chars string) int {
 // TODO: IndexFunc
 // TODO: IndexRune
 
-// TODO: Join in slices
-
 // LastIndex returns the index of the last instance of substr in self, 
 // or -1 if substr is not present in self.
 func (self String) LastIndex(substr string) int {
